@@ -1,0 +1,61 @@
+/* تحسينات إضافية للتطبيق */
+
+/* تحسين الخطوط العربية */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap');
+
+/* إعدادات الخط الأساسي */
+* {
+  font-family: 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+/* تحسينات للهواتف المحمولة */
+@media (max-width: 640px) {
+  .mobile-optimized {
+    padding: 1rem;
+  }
+  
+  .mobile-card {
+    margin: 0.5rem;
+    border-radius: 1rem;
+  }
+  
+  .mobile-input {
+    height: 3rem;
+    font-size: 1rem;
+  }
+  
+  .mobile-button {
+    height: 3rem;
+    font-size: 1.1rem;
+  }
+}
+
+/* تأثيرات متدرجة ناعمة */
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* تحسين الأنيميشن */
+.smooth-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* تحسين الظلال */
+.enhanced-shadow {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* تحسين التركيز للوصولية */
+.focus-enhanced:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
