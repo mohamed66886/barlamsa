@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { formatDateArabic, formatTime, getTodayString, getTodayForNewDay, isToday } from '@/lib/dateUtils';
+import { notificationHelpers } from '@/lib/notificationHelpers';
 import { 
   Plus, 
   DollarSign,
@@ -163,6 +164,16 @@ const BarberDailyRecords = () => {
         setTodayCash(todayCash + amount);
       } else {
         setTodayCard(todayCard + amount);
+      }
+      
+      // إنشاء إشعار للتسجيل اليومي
+      const clientsCount = records.length + 1; // عدد العملاء الجديد
+      const newTotalAmount = todayTotal + amount;
+      await notificationHelpers.dailyRecord(currentBarber!.name, clientsCount, newTotalAmount);
+      
+      // إشعار للأداء المتميز عند الوصول لعدد معين من العملاء
+      if (clientsCount >= 10 && clientsCount % 5 === 0) {
+        await notificationHelpers.highPerformance(currentBarber!.name, clientsCount);
       }
       
       setNewRecord({ amount: '', paymentMethod: '' });

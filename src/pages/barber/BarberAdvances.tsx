@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { formatDateArabic, formatTime } from '@/lib/dateUtils';
+import { notificationHelpers } from '@/lib/notificationHelpers';
 import { 
   Plus, 
   DollarSign,
@@ -142,6 +143,9 @@ const BarberAdvances = () => {
       // إضافة السلفة للقائمة المحلية
       const newAdvanceWithId = { id: docRef.id, ...advanceData };
       setAdvances([newAdvanceWithId, ...advances]);
+      
+      // إنشاء إشعار طلب السلفة
+      await notificationHelpers.advanceRequest(currentBarber!.name, amount);
       
       setNewAdvance({ amount: '', reason: '' });
       setIsAddDialogOpen(false);

@@ -1,0 +1,129 @@
+/* تحسينات إضافية للشريط الجانبي */
+
+/* تحسين الانيميشن للهاتف المحمول */
+@media (max-width: 768px) {
+  .sidebar-mobile-optimization {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .sidebar-mobile-optimization[data-state="expanded"] {
+    width: 85vw;
+    max-width: 320px;
+  }
+  
+  .sidebar-mobile-optimization[data-state="collapsed"] {
+    width: 60px;
+  }
+}
+
+/* تأثيرات hover متطورة */
+.sidebar-nav-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-nav-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.sidebar-nav-item:hover::before {
+  left: 100%;
+}
+
+/* تأثير النبضة للشارات */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.8);
+    transform: scale(1.05);
+  }
+}
+
+.badge-pulse {
+  animation: pulse-glow 2s infinite;
+}
+
+/* تحسين عرض النصوص العربية */
+.arabic-text-optimization {
+  font-family: 'Segoe UI', 'Tahoma', 'Arial', 'sans-serif';
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* تأثير الانتقال السلس للألوان */
+.color-transition {
+  transition: all 0.3s ease-in-out;
+}
+
+.color-transition:hover {
+  transform: translateX(-2px);
+}
+
+/* تحسين الظلال للشاشات عالية الدقة */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .enhanced-shadow {
+    box-shadow: 
+      0 1px 3px rgba(0, 0, 0, 0.12),
+      0 1px 2px rgba(0, 0, 0, 0.24);
+  }
+  
+  .enhanced-shadow:hover {
+    box-shadow: 
+      0 3px 6px rgba(0, 0, 0, 0.16),
+      0 3px 6px rgba(0, 0, 0, 0.23);
+  }
+}
+
+/* تحسين الـ scrollbar للشريط الجانبي */
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 2px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #3b82f6, #6366f1);
+  border-radius: 2px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #2563eb, #4f46e5);
+}
+
+/* تأثير التموج عند الضغط */
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.ripple-effect:active::after {
+  width: 300px;
+  height: 300px;
+}

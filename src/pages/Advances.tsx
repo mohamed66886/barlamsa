@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
+import { formatDateArabic, formatTime } from '@/lib/dateUtils';
 import { 
   Plus, 
   Search, 
@@ -20,9 +21,17 @@ import {
   AlertTriangle,
   Loader2,
   TrendingDown,
-  Users
+  Users,
+  Check,
+  X,
+  Clock,
+  Filter,
+  FileText,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 interface Barber {
   id: string;
@@ -39,16 +48,22 @@ interface Advance {
   amount: number;
   date: string;
   reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  notes?: string;
+  approvedBy?: string;
+  approvedAt?: Date | { toDate: () => Date };
   createdAt: Date;
 }
 
 const Advances = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [advancesLoading, setAdvancesLoading] = useState(true);
   const [barbersLoading, setBarbersLoading] = useState(true);
   const [hasPermissionError, setHasPermissionError] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string>('');
   
   const [newAdvance, setNewAdvance] = useState({
     barberId: '',
@@ -126,6 +141,7 @@ const Advances = () => {
             amount: 500,
             date: '2024-07-10',
             reason: 'مصاريف شخصية طارئة',
+            status: 'pending',
             createdAt: new Date(),
           },
           {
@@ -136,6 +152,9 @@ const Advances = () => {
             amount: 300,
             date: '2024-07-08',
             reason: 'سلفة راتب',
+            status: 'approved',
+            approvedBy: 'الإدارة',
+            approvedAt: new Date(),
             createdAt: new Date(),
           }
         ]);
@@ -182,6 +201,7 @@ const Advances = () => {
         amount: amount,
         reason: newAdvance.reason,
         date: new Date().toISOString().split('T')[0],
+        status: 'pending' as const,
         createdAt: new Date(),
       };
 
@@ -248,12 +268,95 @@ const Advances = () => {
     }
   };
 
-  const filteredAdvances = advances.filter(advance =>
-    advance.barberName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    advance.reason?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleAdvanceAction = async (advanceId: string, action: 'approve' | 'reject', notes?: string) => {
+    try {
+      setActionLoading(advanceId);
+      
+      // لا نحدث البيانات التجريبية
+      if (advanceId.startsWith('demo-')) {
+        toast({
+          title: 'بيانات تجريبية',
+          description: 'لا يمكن تعديل البيانات التجريبية. قم بإعداد Firebase أولاً',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const newStatus = action === 'approve' ? 'approved' : 'rejected';
+      const updateData = {
+        status: newStatus as 'approved' | 'rejected',
+        approvedBy: 'الإدارة', // يمكن تحديث هذا ليعكس المستخدم الحالي
+        approvedAt: new Date(),
+        ...(notes && { notes })
+      };
+
+      await updateDoc(doc(db, 'advances', advanceId), updateData);
+      
+      // تحديث القائمة المحلية
+      setAdvances(advances.map(advance => 
+        advance.id === advanceId 
+          ? { ...advance, ...updateData } 
+          : advance
+      ));
+
+      toast({
+        title: action === 'approve' ? 'تم اعتماد السلفة ✅' : 'تم رفض السلفة ❌',
+        description: action === 'approve' 
+          ? 'تم اعتماد السلفة بنجاح'
+          : 'تم رفض السلفة بنجاح',
+      });
+
+    } catch (error) {
+      console.error('Error updating advance:', error);
+      toast({
+        title: 'خطأ في التحديث',
+        description: 'حدث خطأ أثناء تحديث حالة السلفة',
+        variant: 'destructive',
+      });
+    } finally {
+      setActionLoading('');
+    }
+  };
+
+  const filteredAdvances = advances.filter(advance => {
+    const matchesSearch = advance.barberName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      advance.reason?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || advance.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const totalAdvances = advances.reduce((total, advance) => total + advance.amount, 0);
+  const approvedAdvances = advances.filter(a => a.status === 'approved');
+  const pendingAdvances = advances.filter(a => a.status === 'pending');
+  const rejectedAdvances = advances.filter(a => a.status === 'rejected');
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return (
+          <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
+            <CheckCircle className="h-3 w-3 ml-1" />
+            معتمدة
+          </Badge>
+        );
+      case 'rejected':
+        return (
+          <Badge variant="destructive" className="bg-red-100 text-red-800 hover:bg-red-100">
+            <XCircle className="h-3 w-3 ml-1" />
+            مرفوضة
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+            <Clock className="h-3 w-3 ml-1" />
+            قيد المراجعة
+          </Badge>
+        );
+    }
+  };
   return (
     <div className="space-y-4 p-4 md:p-6">
       {/* تنبيه إعداد Firebase */}
@@ -390,30 +493,16 @@ const Advances = () => {
       </div>
 
       {/* إحصائيات سريعة */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-full">
-                <TrendingDown className="h-5 w-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">إجمالي السلف</p>
-                <p className="text-xl font-bold text-red-600">{totalAdvances.toFixed(2)} ر.س</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 rounded-full">
-                <Users className="h-5 w-5 text-blue-600" />
+                <DollarSign className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">عدد السلف</p>
-                <p className="text-xl font-bold">{advances.length}</p>
+                <p className="text-sm font-medium text-muted-foreground">إجمالي السلف</p>
+                <p className="text-xl font-bold text-blue-600">{totalAdvances.toFixed(2)} ر.س</p>
               </div>
             </div>
           </CardContent>
@@ -422,13 +511,48 @@ const Advances = () => {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-full">
-                <DollarSign className="h-5 w-5 text-orange-600" />
+              <div className="p-2 bg-green-100 rounded-full">
+                <CheckCircle className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">متوسط السلفة</p>
-                <p className="text-xl font-bold">
-                  {advances.length > 0 ? (totalAdvances / advances.length).toFixed(2) : '0.00'} ر.س
+                <p className="text-sm font-medium text-muted-foreground">السلف المعتمدة</p>
+                <p className="text-xl font-bold text-green-600">{approvedAdvances.length}</p>
+                <p className="text-xs text-green-500">
+                  {approvedAdvances.reduce((sum, a) => sum + a.amount, 0).toFixed(2)} ر.س
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-yellow-100 rounded-full">
+                <Clock className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">قيد المراجعة</p>
+                <p className="text-xl font-bold text-yellow-600">{pendingAdvances.length}</p>
+                <p className="text-xs text-yellow-500">
+                  {pendingAdvances.reduce((sum, a) => sum + a.amount, 0).toFixed(2)} ر.س
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-full">
+                <XCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">السلف المرفوضة</p>
+                <p className="text-xl font-bold text-red-600">{rejectedAdvances.length}</p>
+                <p className="text-xs text-red-500">
+                  {rejectedAdvances.reduce((sum, a) => sum + a.amount, 0).toFixed(2)} ر.س
                 </p>
               </div>
             </div>
@@ -436,18 +560,36 @@ const Advances = () => {
         </Card>
       </div>
 
-      {/* Search */}
+      {/* البحث والفلاتر */}
       <Card>
         <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="البحث باسم الحلاق أو سبب السلفة..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pr-10"
-              dir="rtl"
-            />
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="البحث باسم الحلاق أو سبب السلفة..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pr-10"
+                dir="rtl"
+              />
+            </div>
+            <div className="w-full sm:w-48">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="text-right" dir="rtl">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    <SelectValue placeholder="فلتر الحالة" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع الحالات</SelectItem>
+                  <SelectItem value="pending">قيد المراجعة</SelectItem>
+                  <SelectItem value="approved">معتمدة</SelectItem>
+                  <SelectItem value="rejected">مرفوضة</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -483,21 +625,89 @@ const Advances = () => {
                       <div className="flex items-center gap-4 mt-2 flex-wrap">
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Calendar className="h-3 w-3" />
-                          <span>{new Date(advance.date).toLocaleDateString('ar-SA')}</span>
+                          <span>{formatDateArabic(advance.date)}</span>
                         </div>
-                        <Badge variant="destructive" className="text-sm">
+                        <Badge variant="outline" className="text-sm">
                           <DollarSign className="h-3 w-3 ml-1" />
                           {advance.amount.toFixed(2)} ر.س
                         </Badge>
+                        {getStatusBadge(advance.status)}
                       </div>
+                      
+                      {/* معلومات الاعتماد */}
+                      {advance.status !== 'pending' && advance.approvedBy && (
+                        <div className="mt-2 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            <span>
+                              {advance.status === 'approved' ? 'اعتمدت بواسطة' : 'رفضت بواسطة'}: {advance.approvedBy}
+                            </span>
+                          </div>
+                          {advance.approvedAt && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <Clock className="h-3 w-3" />
+                              <span>
+                                {formatDateArabic(advance.approvedAt instanceof Date 
+                                  ? advance.approvedAt.toISOString().split('T')[0] 
+                                  : advance.approvedAt.toDate().toISOString().split('T')[0])}
+                                {' - '}
+                                {formatTime(advance.approvedAt instanceof Date 
+                                  ? advance.approvedAt 
+                                  : advance.approvedAt.toDate())}
+                              </span>
+                            </div>
+                          )}
+                          {advance.notes && (
+                            <div className="flex items-start gap-1 mt-1">
+                              <FileText className="h-3 w-3 mt-0.5" />
+                              <span className="line-clamp-2">{advance.notes}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   
-                  <div className="flex gap-1 ml-2">
+                  <div className="flex flex-col sm:flex-row gap-1 ml-2">
+                    {/* أزرار التأكيد/الرفض للسلف المعلقة */}
+                    {advance.status === 'pending' && (
+                      <>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                          onClick={() => handleAdvanceAction(advance.id, 'approve')}
+                          disabled={actionLoading === advance.id}
+                        >
+                          {actionLoading === advance.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Check className="h-4 w-4" />
+                          )}
+                          <span className="hidden sm:inline ml-1">اعتماد</span>
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                          onClick={() => handleAdvanceAction(advance.id, 'reject')}
+                          disabled={actionLoading === advance.id}
+                        >
+                          {actionLoading === advance.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <X className="h-4 w-4" />
+                          )}
+                          <span className="hidden sm:inline ml-1">رفض</span>
+                        </Button>
+                      </>
+                    )}
+                    
+                    {/* زر الحذف */}
                     <Button 
                       variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-red-600 hover:text-red-700"
+                      size="sm" 
+                      className="text-red-600 hover:text-red-700"
                       onClick={() => handleDeleteAdvance(advance.id)}
                     >
                       <Trash2 className="h-4 w-4" />

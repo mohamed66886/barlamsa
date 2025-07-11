@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, EyeOff, Loader2, Scissors, Settings } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { notificationHelpers } from '@/lib/notificationHelpers';
 
 const BarberLogin = () => {
   const [email, setEmail] = useState('');
@@ -64,6 +65,9 @@ const BarberLogin = () => {
         uid: user.uid,
         ...barberData
       }));
+
+      // إنشاء إشعار تسجيل دخول الحلاق
+      await notificationHelpers.barberLogin(barberData.name);
 
       toast({
         title: 'أهلاً وسهلاً! 🎉',

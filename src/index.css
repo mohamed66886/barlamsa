@@ -135,3 +135,61 @@ All colors MUST be HSL.
     background: hsl(var(--primary) / 0.3);
   }
 }
+
+/* تحسينات خاصة بالإشعارات */
+@layer components {
+  .notification-item {
+    @apply transition-all duration-200 hover:shadow-sm;
+  }
+  
+  .notification-item:hover {
+    transform: translateX(-2px);
+  }
+  
+  .notification-unread {
+    @apply shadow-sm;
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.1);
+  }
+  
+  .notification-badge {
+    animation: notification-pulse 2s infinite;
+  }
+  
+  @keyframes notification-pulse {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.1);
+      opacity: 0.8;
+    }
+  }
+  
+  .header-status-indicator {
+    position: relative;
+  }
+  
+  .header-status-indicator::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 8px;
+    background: currentColor;
+    border-radius: 50%;
+    animation: status-pulse 2s infinite;
+  }
+  
+  @keyframes status-pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(1.2);
+    }
+  }
+}
